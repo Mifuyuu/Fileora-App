@@ -230,10 +230,16 @@ app.get('/api/search/:key', async (req, res) => {
 
 app.get('/api/download/:sessionId/:filename', async (req, res) => {
     const { sessionId, filename } = req.params;
+    const providedKey = (req.headers['x-access-key'] || '').toUpperCase();
+
     try {
         const session = await Session.findOne({ sessionId });
         if (!session) return res.status(404).send('Session or file expired.');
-        
+
+        if (session.accessKey !== providedKey) {
+            return res.status(403).send('Access denied: Invalid or missing access key.');
+        }
+
         const fileInfo = session.files.find(f => f.filename === filename);
         if (!fileInfo) return res.status(404).send('File not found in session.');
 
@@ -253,6 +259,7 @@ app.get('/api/download/:sessionId/:filename', async (req, res) => {
         res.status(500).send('Could not decrypt or download the file.');
     }
 });
+
 
 // --- PLATFORM INTEGRATIONS ---
 const lineRawMiddleware = express.raw({ type: '*/*' });

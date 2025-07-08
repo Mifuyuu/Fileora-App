@@ -16,7 +16,7 @@ const sessionSchema = new mongoose.Schema({
     accessKey: { type: String, required: true, unique: true, index: true },
     encryptionKey: { type: String, required: true },
     files: [fileSchema],
-    createdAt: { type: Date, default: Date.now, expires: '10m' }
+    createdAt: { type: Date, default: Date.now, expires: '5m' }
 });
 
 const Session = mongoose.model('Session', sessionSchema);
