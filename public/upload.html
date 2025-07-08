@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fileora - Upload</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #121212;
+      color: #eee;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      box-sizing: border-box;
+      text-align: center;
+    }
+
+    .container {
+      background: #1f1f1f;
+      padding: 25px;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+
+    h2 {
+      margin-top: 0;
+      color: #fafafa;
+    }
+
+    p {
+      color: #aaa;
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    .file-label {
+      display: block;
+      padding: 20px;
+      border: 2px dashed #444;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 15px;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .file-label:hover {
+      background: #2a2a2a;
+      border-color: #8a2be2;
+    }
+
+    #fileName {
+      display: block;
+      margin-top: 10px;
+      color: #00bcd4;
+      font-weight: bold;
+      word-break: break-all;
+    }
+
+    button {
+      font-size: 1rem;
+      padding: 12px 20px;
+      border-radius: 8px;
+      border: none;
+      margin-top: 10px;
+      width: 100%;
+      box-sizing: border-box;
+      cursor: pointer;
+      background: #8a2be2;
+      color: #fff;
+      font-weight: bold;
+      transition: background 0.3s ease;
+    }
+
+    button:hover:not(:disabled) {
+      background: #a150ff;
+    }
+
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+
+    #progressBar {
+      width: 100%;
+      height: 10px;
+      background: #333;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 15px;
+      display: none;
+    }
+
+    #progressBar div {
+      height: 100%;
+      width: 0;
+      background: #2aeb74;
+      transition: width 0.3s ease;
+    }
+
+    #statusMessage {
+      margin-top: 15px;
+      font-weight: bold;
+    }
+
+    #usedSessionContainer {
+      display: none;
+    }
+
+    #usedSessionContainer p {
+      font-size: 1.2rem;
+      color: #ff7b7b;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div id="uploadContainer">
+      <h2>Upload File</h2>
+      <p id="infoText">Select a file to send to your computer.</p>
+      <input type="file" id="fileInput" />
+      <label for="fileInput" class="file-label">
+        <span>Click to select a file</span>
+        <span id="fileName"></span>
+      </label>
+      <button id="btnUpload" disabled>Upload File</button>
+      <div id="progressBar">
+        <div></div>
+      </div>
+      <div id="statusMessage"></div>
+    </div>
+    <div id="usedSessionContainer">
+      <p>This session has already been used. Please create a new session on your computer!</p>
+    </div>
+  </div>
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const btnUpload = document.getElementById('btnUpload');
+    const progressBar = document.getElementById('progressBar');
+    const progressBarInner = progressBar.firstElementChild;
+    const fileNameDisplay = document.getElementById('fileName');
+    const statusMessage = document.getElementById('statusMessage');
+    const uploadContainer = document.getElementById('uploadContainer');
+    const usedSessionContainer = document.getElementById('usedSessionContainer');
+    let sessionId = null;
+
+    function showStatus(message, isError = false) {
+      statusMessage.textContent = message;
+      statusMessage.style.color = isError ? '#ff4d4d' : '#2aeb74';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      sessionId = urlParams.get('sessionId');
+      if (!sessionId) {
+        document.getElementById('infoText').textContent = "Error: Invalid or missing session link.";
+        fileInput.disabled = true;
+        btnUpload.disabled = true;
+      }
+    });
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length > 0) {
+        fileNameDisplay.textContent = fileInput.files[0].name;
+        btnUpload.disabled = false;
+        showStatus('');
+      } else {
+        fileNameDisplay.textContent = '';
+        btnUpload.disabled = true;
+      }
+    });
+
+    btnUpload.addEventListener('click', async () => {
+      if (!fileInput.files.length || !sessionId) return;
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append('file', file);
+      btnUpload.disabled = true;
+      progressBar.style.display = 'block';
+      progressBarInner.style.width = '0%';
+      showStatus('Uploading...');
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `/api/upload?sessionId=${sessionId}`, true);
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percent = (event.loaded / event.total) * 100;
+          progressBarInner.style.width = percent.toFixed(2) + '%';
+        }
+      };
+      xhr.onload = () => {
+        progressBar.style.display = 'none';
+        if (xhr.status === 200) {
+          showStatus('✅ Upload Successful! You can close this window.');
+          setTimeout(() => window.close(), 3000);
+        } else {
+          try {
+            const errorResponse = JSON.parse(xhr.responseText);
+            showStatus(`Upload Failed: ${errorResponse.error || 'Server error'}`, true);
+            if (xhr.status === 403) {
+              uploadContainer.style.display = 'none';
+              usedSessionContainer.style.display = 'block';
+            } else {
+              btnUpload.disabled = false;
+            }
+          } catch (e) {
+            showStatus(`Upload Failed: An unknown error occurred.`, true);
+            btnUpload.disabled = false;
+          }
+        }
+      };
+      xhr.onerror = () => {
+        showStatus('An error occurred during the transfer.', true);
+        btnUpload.disabled = false;
+        progressBar.style.display = 'none';
+      };
+      xhr.send(formData);
+    });
+  </script>
+</body>
+
+</html>
