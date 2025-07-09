@@ -230,16 +230,10 @@ app.get('/api/search/:key', async (req, res) => {
 
 app.get('/api/download/:sessionId/:filename', async (req, res) => {
     const { sessionId, filename } = req.params;
-    const providedKey = (req.headers['x-access-key'] || '').toUpperCase();
-
     try {
         const session = await Session.findOne({ sessionId });
         if (!session) return res.status(404).send('Session or file expired.');
-
-        if (session.accessKey !== providedKey) {
-            return res.status(403).send('Access denied: Invalid or missing access key.');
-        }
-
+        
         const fileInfo = session.files.find(f => f.filename === filename);
         if (!fileInfo) return res.status(404).send('File not found in session.');
 
@@ -259,6 +253,38 @@ app.get('/api/download/:sessionId/:filename', async (req, res) => {
         res.status(500).send('Could not decrypt or download the file.');
     }
 });
+
+// app.get('/api/download/:sessionId/:filename', async (req, res) => {
+//     const { sessionId, filename } = req.params;
+//     const providedKey = (req.headers['x-access-key'] || '').toUpperCase();
+
+//     try {
+//         const session = await Session.findOne({ sessionId });
+//         if (!session) return res.status(404).send('Session or file expired.');
+
+//         if (session.accessKey !== providedKey) {
+//             return res.status(403).send('Access denied: Invalid or missing access key.');
+//         }
+
+//         const fileInfo = session.files.find(f => f.filename === filename);
+//         if (!fileInfo) return res.status(404).send('File not found in session.');
+
+//         const filePath = path.join(__dirname, 'uploads', sessionId, filename);
+//         if (!fs.existsSync(filePath)) return res.status(404).send('File not found on disk.');
+
+//         const encryptionKey = Buffer.from(session.encryptionKey, 'hex');
+//         const iv = Buffer.from(fileInfo.iv, 'hex');
+//         const authTag = Buffer.from(fileInfo.authTag, 'hex');
+//         const decipher = crypto.createDecipheriv(ENCRYPTION_ALGORITHM, encryptionKey, iv);
+//         decipher.setAuthTag(authTag);
+
+//         res.setHeader('Content-Disposition', `attachment; filename="${fileInfo.originalname}"`);
+//         fs.createReadStream(filePath).pipe(decipher).pipe(res);
+//     } catch (error) {
+//         console.error('Decryption error:', error);
+//         res.status(500).send('Could not decrypt or download the file.');
+//     }
+// });
 
 
 // --- PLATFORM INTEGRATIONS ---
