@@ -222,6 +222,7 @@ body {
 .input::placeholder {
     color: var(--text-color);
     text-transform: none;
+    transition: var(--global-transition);
 }
 
 .labelforsearch {
