@@ -1,6 +1,3 @@
-// ตรวจสอบให้แน่ใจว่าจุดเริ่มต้นของไฟล์ script.js ของคุณเป็นแบบนี้
-
-// --- Element References ---
 const scanBtn = document.getElementById('scanBtn');
 const githubBtn = document.getElementById('githubBtn');
 const mainContainer = document.getElementById('mainContainer');
@@ -16,11 +13,10 @@ const searchIcon = document.querySelector('.labelforsearch');
 const mainSearchResults = document.getElementById('mainSearchResults');
 const notificationSound = document.getElementById('notificationSound');
 
-// --- Upload Popup References ---
 const uploadPopup = document.getElementById('uploadPopup');
 const uploadPopupTitle = document.getElementById('uploadPopupTitle');
 const uploadPopupContent = document.getElementById('uploadPopupContent');
-// **สำคัญ:** ใช้ตัวแปรที่ตรงกับ ID ใน HTML
+
 const closeUploadPopup = document.getElementById('closeUploadPopup'); 
 
 let ws;
@@ -99,7 +95,7 @@ async function performSearch() {
         const data = await res.json();
         displaySearchResults(data.files, key);
     } catch (error) {
-        console.error('Search failed:', error);
+        // console.error('Search failed:', error); // in development
         handleSearchError();
         mainSearchResults.innerHTML = '';
     }
@@ -133,15 +129,15 @@ scanBtn.onclick = async () => {
                     showUploadNotification(data.key);
                 }
             } catch (err) {
-                console.error("Error processing WebSocket message:", err);
+                // console.error("Error processing WebSocket message:", err);
             }
         };
         ws.onerror = (err) => {
-            console.error("WebSocket Error:", err);
+            // console.error("WebSocket Error:", err);
             qrInfoText.innerHTML += `<span style="color:red; display:block; margin-top:5px;">Connection failed.</span>`;
         };
     } catch (error) {
-        console.error("Session creation failed:", error);
+        // console.error("Session creation failed:", error);
         alert("Could not start a new session. Please try again.");
     }
 };
@@ -151,7 +147,6 @@ closeQr.onclick = () => {
     if (ws) ws.close();
 };
 
-// **สำคัญ:** ใช้ตัวแปรที่ถูกต้อง `closeUploadPopup`
 closeUploadPopup.onclick = () => {
     uploadPopup.classList.add('hidden');
 };
@@ -163,7 +158,6 @@ searchInputField.addEventListener('keypress', (e) => { if (e.key === 'Enter') pe
 searchIcon.addEventListener('click', performSearch);
 
 // --- Theme Management ---
-// ย้ายส่วนนี้ไปไว้ท้ายสุดเพื่อให้แน่ใจว่าทำงานหลัง Event Listeners อื่นๆ
 document.addEventListener('DOMContentLoaded', () => {
     const themeToggle = document.getElementById('theme-toggle');
     const body = document.body;
@@ -174,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     themeToggle.addEventListener('change', () => setTheme(themeToggle.checked ? 'dark' : 'light'));
     
-    // ตั้งค่า theme เริ่มต้น
+    // Load saved theme or default to dark
     const savedTheme = localStorage.getItem('theme') || 'dark';
     setTheme(savedTheme);
 });
