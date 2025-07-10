@@ -267,7 +267,6 @@ body {
     padding: 12px 20px;
     background-color: var(--container-border-color);
     border-radius: 10px;
-    /* transition: background-color 0.2s ease, transform 0.2s ease; */
     transition: var(--global-transition);
 }
 
@@ -289,6 +288,7 @@ body {
     word-break: break-all;
     flex-grow: 1;
     margin-right: 10px;
+    transition: var(--global-transition);
 }
 
 .result-item .download-btn {
