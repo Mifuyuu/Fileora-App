@@ -312,6 +312,7 @@ body {
     gap: 6px;
     font-size: 0.85rem;
     color: var(--text-color);
+    transition: var(--global-transition);
 }
 
 .sender-info .icon-discord {
