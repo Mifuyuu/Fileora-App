@@ -217,12 +217,12 @@ body {
     background-color: transparent;
     color: var(--icon-color);
     text-transform: uppercase;
+    transition: var(--global-transition);
 }
 
 .input::placeholder {
     color: var(--text-color);
     text-transform: none;
-    transition: var(--global-transition);
 }
 
 .labelforsearch {
@@ -253,6 +253,7 @@ body {
     flex-direction: column;
     align-items: center;
     gap: 15px;
+    transition: var(--global-transition);
 }
 
 #mainSearchResults h3 {
@@ -266,7 +267,8 @@ body {
     padding: 12px 20px;
     background-color: var(--container-border-color);
     border-radius: 10px;
-    transition: background-color 0.2s ease, transform 0.2s ease;
+    /* transition: background-color 0.2s ease, transform 0.2s ease; */
+    /* transition: var(--global-transition); */
 }
 
 .result-item:hover {
