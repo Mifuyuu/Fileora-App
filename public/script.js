@@ -95,7 +95,7 @@ async function performSearch() {
         const data = await res.json();
         displaySearchResults(data.files, key);
     } catch (error) {
-        // console.error('Search failed:', error); // in development
+        console.error('Search failed:', error);
         handleSearchError();
         mainSearchResults.innerHTML = '';
     }
@@ -129,15 +129,15 @@ scanBtn.onclick = async () => {
                     showUploadNotification(data.key);
                 }
             } catch (err) {
-                // console.error("Error processing WebSocket message:", err);
+                console.error("Error processing WebSocket message:", err);
             }
         };
         ws.onerror = (err) => {
-            // console.error("WebSocket Error:", err);
+            console.error("WebSocket Error:", err);
             qrInfoText.innerHTML += `<span style="color:red; display:block; margin-top:5px;">Connection failed.</span>`;
         };
     } catch (error) {
-        // console.error("Session creation failed:", error);
+        console.error("Session creation failed:", error);
         alert("Could not start a new session. Please try again.");
     }
 };
