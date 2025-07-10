@@ -495,7 +495,8 @@ app.post('/line-webhook', lineRawMiddleware, line.middleware(lineClient.config),
         }
         res.sendStatus(200);
     } catch (error) {
-        console.error('LINE Webhook Error:', error.originalError?.response?.data || error);
+        // console.error('LINE Webhook Error:', error.originalError?.response?.data || error); // in development
+        console.error('LINE Webhook Error:', error.message || 'Unknown error'); // in production
         res.sendStatus(500);
     }
 });
