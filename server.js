@@ -387,6 +387,12 @@ discordClient.login(DISCORD_BOT_TOKEN);
 cron.schedule('*/5 * * * *', () => { // every 5 minutes cleanup
     console.log('Running scheduled cleanup for orphaned folders (every 5 minutes)...');
     const uploadsDir = path.join(__dirname, 'uploads');
+
+    if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+        console.log('Created missing "uploads" folder.');
+        return;
+    }
     fs.readdir(uploadsDir, (err, sessionDirs) => {
         if (err) return console.error('Failed to read uploads directory for cleanup:', err);
         sessionDirs.forEach(async (sessionId) => {
