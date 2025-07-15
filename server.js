@@ -199,6 +199,19 @@ async function processAndSaveFile(stream, originalname, sessionId, encryptionKey
     }
 }
 
+app.get('/api/session/init', async (req, res) => {
+    try {
+        const sessionId = uuidv4();
+        const uploadUrl = `${req.protocol}://${req.get('host')}/upload?sessionId=${sessionId}`;
+        const qr = await QRCode.toDataURL(uploadUrl);
+
+        res.json({ sessionId, qr });
+    } catch (error) {
+        console.error('Session INIT error:', error);
+        res.status(500).json({ error: 'Failed to initialize session' });
+    }
+});
+
 app.get('/api/session', async (req, res) => {
     try {
         const sessionId = uuidv4();
@@ -280,6 +293,90 @@ app.get('/api/session', async (req, res) => {
 //     });
 // });
 
+// app.post('/api/upload', (req, res) => {
+//     const uploader = upload.single('file');
+
+//     uploader(req, res, async (err) => {
+//         if (err) {
+//             return res.status(400).json({ error: err.message });
+//         }
+
+//         const { sessionId } = req.query;
+//         if (!req.file) {
+//             return res.status(400).json({ error: 'No file was uploaded.' });
+//         }
+
+//         try {
+//             const session = await Session.findOne({ sessionId });
+//             if (!session) {
+//                 fs.unlinkSync(req.file.path);
+//                 return res.status(404).json({ error: 'Session not found.' });
+//             }
+
+//             if (session.files.length > 0) {
+//                 fs.unlinkSync(req.file.path);
+//                 return res.status(403).json({ error: 'This session has already been used.' });
+//             }
+
+//             const fileType = await FileType.fromFile(req.file.path);
+//             if (!fileType) {
+//                 fs.unlinkSync(req.file.path);
+//                 return res.status(400).json({ error: 'Unable to determine file type.' });
+//             }
+
+//             const allowedMIMEs = [
+//                 'image/jpeg',
+//                 'image/png',
+//                 'application/pdf',
+//                 'text/plain',
+//                 'application/zip'
+//             ];
+
+//             if (!allowedMIMEs.includes(fileType.mime)) {
+//                 fs.unlinkSync(req.file.path);
+//                 return res.status(400).json({ error: `Disallowed MIME type: ${fileType.mime}` });
+//             }
+
+//             const encKeyBuffer = Buffer.from(session.encryptionKey, 'hex');
+//             const iv = crypto.randomBytes(12);
+//             const cipher = crypto.createCipheriv(ENCRYPTION_ALGORITHM, encKeyBuffer, iv);
+//             const encryptedFilename = uuidv4() + '.enc';
+//             const encryptedFilePath = path.join(req.file.destination, encryptedFilename);
+
+//             const readStream = fs.createReadStream(req.file.path);
+//             const writeStream = fs.createWriteStream(encryptedFilePath);
+//             await new Promise((resolve, reject) => {
+//                 readStream.pipe(cipher).pipe(writeStream);
+//                 writeStream.on('finish', resolve);
+//                 writeStream.on('error', reject);
+//             });
+
+//             const authTag = cipher.getAuthTag().toString('hex');
+//             fs.unlinkSync(req.file.path);
+
+//             const fileData = {
+//                 filename: encryptedFilename,
+//                 originalname: req.file.originalname,
+//                 iv: iv.toString('hex'),
+//                 authTag,
+//                 sender: { platform: 'Web', name: 'Web User' }
+//             };
+
+//             session.files.push(fileData);
+//             await session.save();
+
+//             if (wsClients[sessionId]) {
+//                 wsClients[sessionId].send(JSON.stringify({ type: 'FILE_UPLOADED' }));
+//             }
+
+//             res.json({ success: true, message: 'File uploaded and encrypted.' });
+//         } catch (error) {
+//             console.error(`[Web] Upload processing error:`, error);
+//             if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+//             res.status(500).json({ error: error.message || 'Internal server error.' });
+//         }
+//     });
+// });
 app.post('/api/upload', (req, res) => {
     const uploader = upload.single('file');
 
@@ -294,17 +391,7 @@ app.post('/api/upload', (req, res) => {
         }
 
         try {
-            const session = await Session.findOne({ sessionId });
-            if (!session) {
-                fs.unlinkSync(req.file.path);
-                return res.status(404).json({ error: 'Session not found.' });
-            }
-
-            if (session.files.length > 0) {
-                fs.unlinkSync(req.file.path);
-                return res.status(403).json({ error: 'This session has already been used.' });
-            }
-
+            // ตรวจ MIME type ก่อนทำอย่างอื่น
             const fileType = await FileType.fromFile(req.file.path);
             if (!fileType) {
                 fs.unlinkSync(req.file.path);
@@ -324,6 +411,21 @@ app.post('/api/upload', (req, res) => {
                 return res.status(400).json({ error: `Disallowed MIME type: ${fileType.mime}` });
             }
 
+            // ค้นหา session ถ้าไม่มี ให้สร้างใหม่
+            let session = await Session.findOne({ sessionId });
+            if (!session) {
+                const accessKey = generateAccessKey();
+                const encryptionKey = crypto.createHash('sha256').update(sessionId + ENCRYPTION_SECRET).digest('hex');
+                session = new Session({ sessionId, accessKey, encryptionKey, files: [] });
+            }
+
+            // ถ้ามีไฟล์อยู่แล้ว ไม่ให้ใช้ซ้ำ
+            if (session.files.length > 0) {
+                fs.unlinkSync(req.file.path);
+                return res.status(403).json({ error: 'This session has already been used.' });
+            }
+
+            // เข้ารหัสไฟล์
             const encKeyBuffer = Buffer.from(session.encryptionKey, 'hex');
             const iv = crypto.randomBytes(12);
             const cipher = crypto.createCipheriv(ENCRYPTION_ALGORITHM, encKeyBuffer, iv);
@@ -341,6 +443,7 @@ app.post('/api/upload', (req, res) => {
             const authTag = cipher.getAuthTag().toString('hex');
             fs.unlinkSync(req.file.path);
 
+            // บันทึกข้อมูลไฟล์ลงใน session
             const fileData = {
                 filename: encryptedFilename,
                 originalname: req.file.originalname,
@@ -352,8 +455,12 @@ app.post('/api/upload', (req, res) => {
             session.files.push(fileData);
             await session.save();
 
+            // แจ้ง WebSocket ว่ามีไฟล์อัปโหลดแล้ว พร้อมส่ง accessKey
             if (wsClients[sessionId]) {
-                wsClients[sessionId].send(JSON.stringify({ type: 'FILE_UPLOADED' }));
+                wsClients[sessionId].send(JSON.stringify({
+                    type: 'FILE_UPLOADED',
+                    key: session.accessKey
+                }));
             }
 
             res.json({ success: true, message: 'File uploaded and encrypted.' });

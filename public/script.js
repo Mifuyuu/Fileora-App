@@ -104,12 +104,12 @@ async function performSearch() {
 // --- Event Listeners ---
 scanBtn.onclick = async () => {
     try {
-        const res = await fetch('/api/session');
+        const res = await fetch('/api/session/init');
         if (!res.ok) throw new Error('Failed to fetch session from server.');
         const data = await res.json();
         
         qrImage.src = data.qr;
-        qrInfoText.innerHTML = `Your key: <strong>${data.key}</strong><span>Waiting for upload...</span>`;
+        qrInfoText.innerHTML = `<span>Scan the QR with your phone to upload file.</span><span>Waiting for upload...</span>`;
         qrPopup.classList.remove('hidden');
 
         if (ws) ws.close();
@@ -124,9 +124,9 @@ scanBtn.onclick = async () => {
                 const msg = JSON.parse(e.data);
                 if (msg.type === 'FILE_UPLOADED') {
                     qrPopup.classList.add('hidden');
-                    searchInputField.value = data.key;
+                    searchInputField.value = msg.key;
                     performSearch();
-                    showUploadNotification(data.key);
+                    showUploadNotification(msg.key);
                 }
             } catch (err) {
                 console.error("Error processing WebSocket message:", err);
