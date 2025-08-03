@@ -140,3 +140,6 @@ vite.config.ts.timestamp-*
 
 # Upload directories
 uploads/*
+
+# Ignore all markdown files in uploads directory
+*.md
