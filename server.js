@@ -391,7 +391,21 @@ app.post('/api/upload', (req, res) => {
         }
 
         try {
-            // ตรวจ MIME type ก่อนทำอย่างอื่น
+            // ค้นหา session ก่อน
+            let session = await Session.findOne({ sessionId });
+            if (!session) {
+                const accessKey = generateAccessKey();
+                const encryptionKey = crypto.createHash('sha256').update(sessionId + ENCRYPTION_SECRET).digest('hex');
+                session = new Session({ sessionId, accessKey, encryptionKey, files: [] });
+            }
+
+            // ถ้ามีไฟล์อยู่แล้ว ไม่ให้ใช้ซ้ำ
+            if (session.files.length > 0) {
+                fs.unlinkSync(req.file.path);
+                return res.status(403).json({ error: 'This session has already been used.' });
+            }
+
+            // ตรวจ MIME type
             const fileType = await FileType.fromFile(req.file.path);
             if (!fileType) {
                 fs.unlinkSync(req.file.path);
@@ -409,20 +423,6 @@ app.post('/api/upload', (req, res) => {
             if (!allowedMIMEs.includes(fileType.mime)) {
                 fs.unlinkSync(req.file.path);
                 return res.status(400).json({ error: `Disallowed MIME type: ${fileType.mime}` });
-            }
-
-            // ค้นหา session ถ้าไม่มี ให้สร้างใหม่
-            let session = await Session.findOne({ sessionId });
-            if (!session) {
-                const accessKey = generateAccessKey();
-                const encryptionKey = crypto.createHash('sha256').update(sessionId + ENCRYPTION_SECRET).digest('hex');
-                session = new Session({ sessionId, accessKey, encryptionKey, files: [] });
-            }
-
-            // ถ้ามีไฟล์อยู่แล้ว ไม่ให้ใช้ซ้ำ
-            if (session.files.length > 0) {
-                fs.unlinkSync(req.file.path);
-                return res.status(403).json({ error: 'This session has already been used.' });
             }
 
             // เข้ารหัสไฟล์
@@ -638,53 +638,66 @@ discordClient.on(Events.MessageCreate, async (message) => {
         }
     }
 });
-discordClient.login(DISCORD_BOT_TOKEN);
 
 // --- PERIODIC CLEANUP ---
-cron.schedule('0 */1 * * *', () => { // 1 hour cleanup
-// cron.schedule('*/5 * * * *', () => { // every 5 minutes cleanup
-    console.log('Running scheduled cleanup for orphaned folders (every 5 minutes)...');
-    const uploadsDir = path.join(__dirname, 'uploads');
+// Cron job is now started conditionally below
 
-    if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-        console.log('Created missing "uploads" folder.');
-        return;
-    }
-    fs.readdir(uploadsDir, (err, sessionDirs) => {
-        if (err) return console.error('Failed to read uploads directory for cleanup:', err);
-        sessionDirs.forEach(async (sessionId) => {
-            const session = await Session.findOne({ sessionId });
-            if (!session) {
-                const dirPath = path.join(uploadsDir, sessionId);
-                fs.rm(dirPath, { recursive: true, force: true }, (rmErr) => {
-                    if (rmErr) console.error(`Failed to delete orphaned directory: ${dirPath}`, rmErr);
-                    else console.log(`Cleaned up orphaned directory: ${sessionId}`);
-                });
+// --- WEBSOCKET SERVER & APP START ---
+let server;
+
+if (require.main === module) {
+    // Start Discord Bot
+    discordClient.login(DISCORD_BOT_TOKEN);
+
+    // Start Cleanup Cron Job
+    cron.schedule('0 */1 * * *', () => { // 1 hour cleanup
+    // cron.schedule('*/5 * * * *', () => { // every 5 minutes cleanup
+        console.log('Running scheduled cleanup for orphaned folders (every 1 hours)...');
+        const uploadsDir = path.join(__dirname, 'uploads');
+
+        if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+            console.log('Created missing "uploads" folder.');
+            return;
+        }
+        fs.readdir(uploadsDir, (err, sessionDirs) => {
+            if (err) return console.error('Failed to read uploads directory for cleanup:', err);
+            sessionDirs.forEach(async (sessionId) => {
+                const session = await Session.findOne({ sessionId });
+                if (!session) {
+                    const dirPath = path.join(uploadsDir, sessionId);
+                    fs.rm(dirPath, { recursive: true, force: true }, (rmErr) => {
+                        if (rmErr) console.error(`Failed to delete orphaned directory: ${dirPath}`, rmErr);
+                        else console.log(`Cleaned up orphaned directory: ${sessionId}`);
+                    });
+                }
+            });
+        });
+    });
+
+    // Start HTTP & WebSocket Server
+    server = app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+    
+    const wss = new WebSocket.Server({ server });
+    wss.on('connection', (ws) => {
+        let associatedSessionId = null;
+        ws.on('message', (msg) => {
+            try {
+                const data = JSON.parse(msg);
+                if (data.type === 'REGISTER_SESSION' && data.sessionId) {
+                    associatedSessionId = data.sessionId;
+                    wsClients[data.sessionId] = ws;
+                    console.log(`WebSocket registered for session: ${data.sessionId}`);
+                }
+            } catch (e) { console.warn('Received invalid WebSocket message'); }
+        });
+        ws.on('close', () => {
+            if (associatedSessionId && wsClients[associatedSessionId] === ws) {
+                delete wsClients[associatedSessionId];
+                console.log(`WebSocket disconnected for session: ${associatedSessionId}`);
             }
         });
     });
-});
+}
 
-// --- WEBSOCKET SERVER ---
-const server = app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
-const wss = new WebSocket.Server({ server });
-wss.on('connection', (ws) => {
-    let associatedSessionId = null;
-    ws.on('message', (msg) => {
-        try {
-            const data = JSON.parse(msg);
-            if (data.type === 'REGISTER_SESSION' && data.sessionId) {
-                associatedSessionId = data.sessionId;
-                wsClients[data.sessionId] = ws;
-                console.log(`WebSocket registered for session: ${data.sessionId}`);
-            }
-        } catch (e) { console.warn('Received invalid WebSocket message'); }
-    });
-    ws.on('close', () => {
-        if (associatedSessionId && wsClients[associatedSessionId] === ws) {
-            delete wsClients[associatedSessionId];
-            console.log(`WebSocket disconnected for session: ${associatedSessionId}`);
-        }
-    });
-});
+module.exports = app;
