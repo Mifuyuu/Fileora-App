@@ -146,3 +146,5 @@ uploads/*
 .github/
 
 *.DS_Store
+
+*.txt
