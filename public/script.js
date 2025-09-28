@@ -19,7 +19,13 @@ const uploadPopupContent = document.getElementById('uploadPopupContent');
 
 const closeUploadPopup = document.getElementById('closeUploadPopup'); 
 
+// File sharing buttons
+const lineShareBtn = document.getElementById('lineShareBtn');
+const discordShareBtn = document.getElementById('discordShareBtn');
+const browserUploadBtn = document.getElementById('browserUploadBtn');
+
 let ws;
+let currentSessionId = null;
 
 // --- Functions ---
 function showUploadNotification(key) {
@@ -108,6 +114,9 @@ scanBtn.onclick = async () => {
         if (!res.ok) throw new Error('Failed to fetch session from server.');
         const data = await res.json();
         
+        // Store session ID for browser upload
+        currentSessionId = data.sessionId;
+        
         qrImage.src = data.qr;
         qrInfoText.innerHTML = `<span>Scan the QR with your phone to upload file.</span><span>Waiting for upload...</span>`;
         qrPopup.classList.remove('hidden');
@@ -144,11 +153,43 @@ scanBtn.onclick = async () => {
 
 closeQr.onclick = () => {
     qrPopup.classList.add('hidden');
+    currentSessionId = null; // Clear session ID when closing
     if (ws) ws.close();
 };
 
 closeUploadPopup.onclick = () => {
     uploadPopup.classList.add('hidden');
+};
+
+// File sharing button handlers
+lineShareBtn.onclick = async () => {
+    const lineID = '@958pbaxr';
+    try {
+        await navigator.clipboard.writeText(lineID);
+        // Show temporary feedback
+        const originalText = lineShareBtn.innerHTML;
+        lineShareBtn.innerHTML = '<i class="bi bi-check-circle"></i><span>LINE ID Copied!</span>';
+        setTimeout(() => {
+            lineShareBtn.innerHTML = originalText;
+        }, 2000);
+    } catch (err) {
+        console.error('Failed to copy LINE ID:', err);
+        // Fallback: show alert with LINE ID
+        alert(`LINE ID: ${lineID}\n\nPlease copy this LINE ID to add friend and send files.`);
+    }
+};
+
+discordShareBtn.onclick = () => {
+    window.open('https://discord.com/oauth2/authorize?client_id=1236905754179665931', '_blank');
+};
+
+browserUploadBtn.onclick = () => {
+    if (currentSessionId) {
+        window.open(`upload.html?sessionId=${currentSessionId}`, '_blank');
+    } else {
+        console.error('No active session found');
+        alert('No active session found. Please generate a new QR code.');
+    }
 };
 
 githubBtn.onclick = () => window.open('https://github.com/Mifuyuu', '_blank');

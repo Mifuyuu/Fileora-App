@@ -25,15 +25,36 @@
             <h2>Scan QR</h2>
             <img id="qrImage" src="" alt="QR Code" />
             <p id="qrInfoText"></p>
+            
+            <!-- File Sharing Buttons -->
+            <div class="file-sharing-buttons">
+                <button id="lineShareBtn" class="share-btn line-btn">
+                    <i class="bi bi-chat-dots"></i>
+                    <span>Send via LINE</span>
+                </button>
+                <button id="discordShareBtn" class="share-btn discord-btn">
+                    <i class="bi bi-discord"></i>
+                    <span>Send via Discord</span>
+                </button>
+                <button id="browserUploadBtn" class="share-btn browser-btn">
+                    <i class="bi bi-cloud-arrow-up"></i>
+                    <span>Upload via Browser</span>
+                </button>
+            </div>
+            
             <i id="closeQr" class="bi bi-x-lg popup-btn"></i>
         </div>
     </div>
 
     <main class="main-content">
+        <div class="welcome-message">
+            <h1>Hi, what files do you want to upload today?</h1>
+        </div>
         <div class="container" id="mainContainer">
             <div class="btn btn-qr" id="scanBtn">
-                <i class="bi bi-qr-code-scan"></i>
-                <span>Scan QR</span>
+                <!-- <i class="bi bi-qr-code-scan"></i> -->
+                <i class="bi bi-send-plus"></i>
+                <span>Upload</span>
             </div>
             <div class="InputContainer" id="searchContainer">
                 <input placeholder="Search" id="searchInput" class="input" name="text" type="text" maxlength="5"/>

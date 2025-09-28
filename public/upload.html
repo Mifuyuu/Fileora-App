@@ -4,48 +4,90 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="icon.png" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <title>Fileora - Upload</title>
   <style>
+    :root {
+      --background-color: #09090b;
+      --text-color: #95959e;
+      --icon-color: #fafafa;
+      --container-bg: #1f1f23;
+      --container-shadow: #0000009f 0px 5px 10px;
+      --hover-color: #8a2be2;
+      --border-color: #444;
+      --input-bg: #2a2a2a;
+      --success-color: #2aeb74;
+      --error-color: #ff4d4d;
+      --disabled-color: #555;
+      --accent-color: #00bcd4;
+    }
+
+    body[data-theme="light"] {
+      --background-color: #f4f4f5;
+      --text-color: #52525b;
+      --icon-color: #18181b;
+      --container-bg: #ffffff;
+      --container-shadow: #0000001a 0px 5px 10px;
+      --border-color: #d1d5db;
+      --input-bg: #f9fafb;
+      --disabled-color: #9ca3af;
+      --accent-color: #0891b2;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Roboto", sans-serif;
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       margin: 0;
       padding: 20px;
-      background: #121212;
-      color: #eee;
+      background-color: var(--background-color);
+      color: var(--text-color);
       display: flex;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
       box-sizing: border-box;
       text-align: center;
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
 
     .container {
-      background: #1f1f1f;
+      background: var(--container-bg);
       padding: 25px;
       border-radius: 12px;
       width: 100%;
       max-width: 480px;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+      box-shadow: var(--container-shadow);
+      border: 1px solid var(--border-color);
     }
 
     h2 {
       margin-top: 0;
-      color: #fafafa;
+      color: var(--icon-color);
     }
 
     p {
-      color: #aaa;
+      color: var(--text-color);
     }
 
     #fileInput {
       display: none;
     }
 
+    #infoText {
+      margin-bottom: 16px;
+      margin-top: 16px;
+    }
+
     .file-label {
       display: block;
       padding: 20px;
-      border: 2px dashed #444;
+      border: 2px dashed var(--border-color);
       border-radius: 8px;
       cursor: pointer;
       margin-bottom: 15px;
@@ -53,14 +95,14 @@
     }
 
     .file-label:hover {
-      background: #2a2a2a;
-      border-color: #8a2be2;
+      background: var(--input-bg);
+      border-color: var(--hover-color);
     }
 
     #fileName {
       display: block;
       margin-top: 10px;
-      color: #00bcd4;
+      color: var(--accent-color);
       font-weight: bold;
       word-break: break-all;
     }
@@ -74,7 +116,7 @@
       width: 100%;
       box-sizing: border-box;
       cursor: pointer;
-      background: #8a2be2;
+      background: var(--hover-color);
       color: #fff;
       font-weight: bold;
       transition: background 0.3s ease;
@@ -85,14 +127,14 @@
     }
 
     button:disabled {
-      background: #555;
+      background: var(--disabled-color);
       cursor: not-allowed;
     }
 
     #progressBar {
       width: 100%;
       height: 10px;
-      background: #333;
+      background: var(--border-color);
       border-radius: 10px;
       overflow: hidden;
       margin-top: 15px;
@@ -102,7 +144,7 @@
     #progressBar div {
       height: 100%;
       width: 0;
-      background: #2aeb74;
+      background: var(--success-color);
       transition: width 0.3s ease;
     }
 
@@ -117,13 +159,13 @@
 
     #usedSessionContainer p {
       font-size: 1.2rem;
-      color: #ff7b7b;
+      color: var(--error-color);
       font-weight: bold;
     }
   </style>
 </head>
 
-<body>
+<body data-theme="dark">
   <div class="container">
     <div id="uploadContainer">
       <h2>Upload File</h2>
@@ -156,10 +198,20 @@
 
     function showStatus(message, isError = false) {
       statusMessage.textContent = message;
-      statusMessage.style.color = isError ? '#ff4d4d' : '#2aeb74';
+      statusMessage.style.color = isError ? 'var(--error-color)' : 'var(--success-color)';
+    }
+
+    // Theme management - sync with main page
+    function initTheme() {
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      document.body.setAttribute('data-theme', savedTheme);
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+      // Initialize theme first
+      initTheme();
+      
+      // Check for session ID
       const urlParams = new URLSearchParams(window.location.search);
       sessionId = urlParams.get('sessionId');
       if (!sessionId) {

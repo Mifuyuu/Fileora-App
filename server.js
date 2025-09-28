@@ -161,7 +161,20 @@ async function processAndSaveFile(stream, originalname, sessionId, encryptionKey
             throw new Error('Unable to determine file type.');
         }
 
-        const allowedMIMEs = ['image/jpeg', 'image/png', 'application/pdf', 'text/plain', 'application/zip'];
+        const allowedMIMEs = [
+            'image/vnd.adobe.photoshop',
+            'image/jpg',
+            'image/jpeg',
+            'image/gif',
+            'image/webp',
+            'image/png',
+            'application/pdf',
+            'text/plain',
+            'application/zip',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+        ];
         if (!allowedMIMEs.includes(fileType.mime)) {
             fs.unlinkSync(tempFilePath);
             throw new Error(`Disallowed MIME type: ${fileType.mime}`);
@@ -413,11 +426,18 @@ app.post('/api/upload', (req, res) => {
             }
 
             const allowedMIMEs = [
+                'image/vnd.adobe.photoshop',
+                'image/jpg',
                 'image/jpeg',
+                'image/gif',
+                'image/webp',
                 'image/png',
                 'application/pdf',
                 'text/plain',
-                'application/zip'
+                'application/zip',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.openxmlformats-officedocument.presentationml.presentation'
             ];
 
             if (!allowedMIMEs.includes(fileType.mime)) {
