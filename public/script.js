@@ -185,7 +185,7 @@ discordShareBtn.onclick = () => {
 
 browserUploadBtn.onclick = () => {
     if (currentSessionId) {
-        window.open(`upload.html?sessionId=${currentSessionId}`, '_blank');
+        window.open(`upload?sessionId=${currentSessionId}`, '_blank');
     } else {
         console.error('No active session found');
         alert('No active session found. Please generate a new QR code.');
