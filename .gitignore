@@ -148,3 +148,5 @@ uploads/*
 *.DS_Store
 
 *.txt
+
+Papers/*
